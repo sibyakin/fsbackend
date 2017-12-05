@@ -34,11 +34,13 @@ my $workers =
 
 post '/xml_api/v1/example.com/dialplan' => sub {
     my $c = shift;
+    $c->render_later;
     $c->render( text => '/dialplan' );
 };
 
 post '/xml_api/v1/example.com/directory' => sub {
     my $c = shift;
+    $c->render_later;
     $c->render( template => 'example.com/directory', format => 'xml' );
 };
 
