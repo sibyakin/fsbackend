@@ -32,27 +32,58 @@ my $cpuinfo = $sysinfo->device( CPU => my %options );
 my $workers =
   ( $cpuinfo->count * 2 );    # yes, we want twice more workers than cores
 
-post '/xml_api/v1/example.com/dialplan' => sub {
+any '/xml_api/v1/dialplan' => sub {
     my $c = shift;
     $c->render_later;
-    $c->render( text => '/dialplan' );
+
+    # <?xml version="1.0" encoding="UTF-8"?>
+    my $xml = XML::LibXML::Document->new( '1.0', 'UTF-8' );
+
+    # <document type="freeswitch/xml">
+    my $document = $xml->createElement('document');
+    $document->setAttribute( 'type' => 'freeswitch/xml' );
+    $xml->setDocumentElement($document);
+
+    # <section name="dialplan">
+    my $section = $xml->createElement('section');
+    $section->setAttribute( 'name' => 'dialplan' );
+    $document->appendChild($section);
+
+    # <context name="default">
+    my $context = $xml->createElement('context');
+    $context->setAttribute( 'name' => 'default' );
+    $section->appendChild($context);
+
+    # <extension name="default">
+    my $extension = $xml->createElement('extension');
+    $extension->setAttribute( 'name' => 'default' );
+    $context->appendChild($extension);
+
+    # <condition>
+    my $condition = $xml->createElement('condition');
+    $extension->appendChild($condition);
+
+    # <action application="" data="">
+    my $action = $xml->createElement('action');
+    $action->setAttribute( 'application' => 'hangup' );
+    $condition->appendChild($action);
+
+    $c->render( data => $xml );
 };
 
-post '/xml_api/v1/example.com/directory' => sub {
+any '/xml_api/v1/directory' => sub {
     my $c = shift;
     $c->render_later;
-    $c->render( template => 'example.com/directory', format => 'xml' );
+    $c->render( template => 'directory', format => 'xml' );
 };
 
-any '/*' => sub {
-    my $c = shift;
-    $c->render( template => 404, format => 'xml' );
-};
-
-any '/' => sub {
-    my $c = shift;
-    $c->render( template => 404, format => 'xml' );
-};
+# Uncomment this if you want to prevent FreeSWITCH to fallback
+# to local xml configs if this backend cannot satisfy request
+#
+#any '/*' => sub {
+#    my $c = shift;
+#    $c->render( template => 404, format => 'xml' );
+#};
 
 app->config( hypnotoad => { workers => $workers } );
 app->start;
