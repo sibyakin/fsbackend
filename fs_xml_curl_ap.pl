@@ -87,3 +87,45 @@ any '/xml_api/v1/directory' => sub {
 
 app->config( hypnotoad => { workers => $workers } );
 app->start;
+
+__DATA__
+
+@@ directory.xml.ep
+<?ml version="1.0" encoding="UTF-8"?>
+<document type="freeswitch/xml">
+    <section name="directory">
+        <domain name="example.com">
+            <params>
+                <param name="dial-string" value="{^^:sip_invite_domain=${dialed_domain}:presence_id=${dialed_user}@${dialed_domain}}${sofia_contact(*/${dialed_user}@${dialed_domain})},${verto_contact(${dialed_user}@${dialed_domain})}"/>
+                <param name="jsonrpc-allowed-methods" value="verto"/>
+            </params>
+            <users>
+                <user id="1000" cacheable="true">
+                    <params>
+                        <param name="auth-acl" value="users"/>
+                        <param name="password" value="1000"/>
+                        <param name="vm-password" value="1000"/>
+                    </params>
+                    <variables>
+                        <variable name="toll_allow" value="domestic,international,local"/>
+                        <variable name="accountcode" value="1000"/>
+                        <variable name="user_context" value="default"/>
+                        <variable name="effective_caller_id_name" value="Extension 1000"/>
+                        <variable name="effective_caller_id_number" value="1000"/>
+                        <variable name="outbound_caller_id_name" value="Extension 1000"/>
+                        <variable name="outbound_caller_id_number" value="1000"/>
+                        <variable name="callgroup" value="techsupport"/>
+                    </variables>
+                </user>
+            </users>
+        </domain>
+    </section>
+</document>
+
+@@ 404.xml.ep
+<?xml version="1.0" encoding="UTF-8"?>
+<document type="freeswitch/xml">
+    <section name="result">
+            <result status="not found" />
+    </section>
+</document>
