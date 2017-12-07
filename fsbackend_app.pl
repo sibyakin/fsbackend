@@ -1,9 +1,9 @@
 #!/usr/bin/env perl
 #===============================================================================
 #
-#         FILE: fs_xml_curl_ap.pl
+#         FILE: fsbackend_app.pl
 #
-#        USAGE: ./fs_xml_curl_ap.pl
+#        USAGE: ./start_server.pl
 #
 #  DESCRIPTION:
 #
