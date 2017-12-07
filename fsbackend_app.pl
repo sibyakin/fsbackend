@@ -32,7 +32,7 @@ my $cpuinfo = $sysinfo->device( CPU => my %options );
 my $workers =
   ( $cpuinfo->count * 2 );    # yes, we want twice more workers than cores
 
-any '/xml_api/v1/dialplan' => sub {
+post '/xml_api/v1/dialplan' => sub {
     my $c = shift;
     $c->render_later;
 
@@ -71,7 +71,7 @@ any '/xml_api/v1/dialplan' => sub {
     $c->render( data => $xml );
 };
 
-any '/xml_api/v1/directory' => sub {
+post '/xml_api/v1/directory' => sub {
     my $c = shift;
     $c->render_later;
     $c->render( template => 'directory', format => 'xml' );
