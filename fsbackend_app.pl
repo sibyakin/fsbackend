@@ -29,10 +29,51 @@ use Sys::Info;
 use XML::LibXML;
 use Mojolicious::Lite;
 
+#$XML::LibXML::setTagCompression = 1;
+
 post '/xml_api/v1/dialplan' => sub {
     my $c = shift;
     $c->render_later;
     say p $c->req->params;
+
+    my $xml = mkxml();
+    my $result = addaction( $xml, 'hangup' );
+
+    $c->render( data => $result );
+};
+
+post '/xml_api/v1/directory' => sub {
+    my $c = shift;
+    $c->render_later;
+    say p $c->req->params;
+    $c->render( template => 'directory', format => 'xml' );
+};
+
+# Uncomment this if you want to prevent FreeSWITCH to fallback
+# to local xml configs if this backend cannot satisfy request
+#
+#any '/*' => sub {
+#    my $c = shift;
+#    $c->render( template => 404, format => 'xml' );
+#};
+
+sub addaction {
+    my ( $xml, $app, $param ) = @_;
+
+    # be aware! context magica here:
+    my ($condition) =
+      $xml->findnodes('/document/section/context/extension/condition');
+
+    # <action application="" data="">
+    my $action = $xml->createElement('action');
+    $action->setAttribute( 'application' => $app );
+    $condition->appendChild($action);
+
+    return $xml;
+
+}
+
+sub mkxml {
 
     # <?xml version="1.0" encoding="UTF-8"?>
     my $xml = XML::LibXML::Document->new( '1.0', 'UTF-8' );
@@ -61,28 +102,9 @@ post '/xml_api/v1/dialplan' => sub {
     my $condition = $xml->createElement('condition');
     $extension->appendChild($condition);
 
-    # <action application="" data="">
-    my $action = $xml->createElement('action');
-    $action->setAttribute( 'application' => 'hangup' );
-    $condition->appendChild($action);
+    return $xml;
 
-    $c->render( data => $xml );
-};
-
-post '/xml_api/v1/directory' => sub {
-    my $c = shift;
-    $c->render_later;
-    say p $c->req->params;
-    $c->render( template => 'directory', format => 'xml' );
-};
-
-# Uncomment this if you want to prevent FreeSWITCH to fallback
-# to local xml configs if this backend cannot satisfy request
-#
-#any '/*' => sub {
-#    my $c = shift;
-#    $c->render( template => 404, format => 'xml' );
-#};
+}
 
 my $sysinfo = Sys::Info->new;
 my $cpuinfo = $sysinfo->device( CPU => my %options );
