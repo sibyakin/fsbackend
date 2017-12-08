@@ -23,18 +23,16 @@ use 5.022;
 use strict;
 use warnings;
 
+use EV;    # just to be sure
+use DDP colored => 1;    # needed for debug only
 use Sys::Info;
 use XML::LibXML;
 use Mojolicious::Lite;
 
-my $sysinfo = Sys::Info->new;
-my $cpuinfo = $sysinfo->device( CPU => my %options );
-my $workers =
-  ( $cpuinfo->count * 2 );    # yes, we want twice more workers than cores
-
 post '/xml_api/v1/dialplan' => sub {
     my $c = shift;
     $c->render_later;
+    say p $c->req->params;
 
     # <?xml version="1.0" encoding="UTF-8"?>
     my $xml = XML::LibXML::Document->new( '1.0', 'UTF-8' );
@@ -74,6 +72,7 @@ post '/xml_api/v1/dialplan' => sub {
 post '/xml_api/v1/directory' => sub {
     my $c = shift;
     $c->render_later;
+    say p $c->req->params;
     $c->render( template => 'directory', format => 'xml' );
 };
 
@@ -84,6 +83,11 @@ post '/xml_api/v1/directory' => sub {
 #    my $c = shift;
 #    $c->render( template => 404, format => 'xml' );
 #};
+
+my $sysinfo = Sys::Info->new;
+my $cpuinfo = $sysinfo->device( CPU => my %options );
+my $workers =
+  ( $cpuinfo->count * 2 );    # yes, we want twice more workers than cores
 
 app->config( hypnotoad => { workers => $workers } );
 app->start;
