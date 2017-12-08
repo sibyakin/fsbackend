@@ -29,17 +29,16 @@ use Sys::Info;
 use XML::LibXML;
 use Mojolicious::Lite;
 
-#$XML::LibXML::setTagCompression = 1;
-
 post '/xml_api/v1/dialplan' => sub {
     my $c = shift;
     $c->render_later;
     say p $c->req->params;
 
     my $xml = mkxml();
-    my $result = addaction( $xml, 'hangup' );
+    addaction( $xml, 'hangup' );
+    addaction( $xml, 'hangup', 'qwe' );
 
-    $c->render( data => $result );
+    $c->render( data => $xml );
 };
 
 post '/xml_api/v1/directory' => sub {
@@ -57,21 +56,27 @@ post '/xml_api/v1/directory' => sub {
 #    $c->render( template => 404, format => 'xml' );
 #};
 
-sub addaction {
-    my ( $xml, $app, $param ) = @_;
+# addaction ("$xml", "fs app")
+# addaction ("$xml", "fs app", "params of app")
 
-    # be aware! context magica here:
+sub addaction {
+    my ( $xml, $app, $dat ) = @_;
+
+    # be aware! context forcing (@=>$) magica here:
     my ($condition) =
       $xml->findnodes('/document/section/context/extension/condition');
 
     # <action application="" data="">
     my $action = $xml->createElement('action');
     $action->setAttribute( 'application' => $app );
+    $action->setAttribute( 'data' => $dat ) if $dat;
     $condition->appendChild($action);
 
     return $xml;
 
 }
+
+# XML boilerplate stuff
 
 sub mkxml {
 
