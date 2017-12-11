@@ -28,23 +28,46 @@ use DDP colored => 1;    # needed for debug only
 use Sys::Info;
 use XML::LibXML;
 use Mojolicious::Lite;
+use Mojo::Pg;
+
+my $pg = Mojo::Pg->new('postgresql://127.0.0.1/fsbackend');
 
 post '/xml_api/v1/dialplan' => sub {
     my $c = shift;
     $c->render_later;
-    say p $c->req->params;
-
     my $xml = mkxml();
     addaction( $xml, 'hangup' );
     addaction( $xml, 'hangup', 'qwe' );
-
     $c->render( data => $xml );
 };
 
 post '/xml_api/v1/directory' => sub {
     my $c = shift;
     $c->render_later;
-    say p $c->req->params;
+    my $foo  = $c->req->body_params->param('foo');
+    my $user = $pg->db->select(
+        'accounts',
+        [
+            'id',               'password',
+            'domain',           'acl',
+            'vm_password',      'toll_allow',
+            'context',          'caller_id_name',
+            'caller_id_number', 'callgroup'
+        ],
+        { id => $foo }
+    )->hash;
+    $c->stash(
+        id               => $user->{id},
+        password         => $user->{password},
+        domain           => $user->{domain},
+        acl              => $user->{acl},
+        vm_password      => $user->{vm_password},
+        toll_allow       => $user->{toll_allow},
+        context          => $user->{context},
+        caller_id_name   => $user->{caller_id_name},
+        caller_id_number => $user->{caller_id_number},
+        callgroup        => $user->{callgroup}
+    );
     $c->render( template => 'directory', format => 'xml' );
 };
 
@@ -72,7 +95,7 @@ sub addaction {
     $action->setAttribute( 'data' => $dat ) if $dat;
     $condition->appendChild($action);
 
-    return $xml;
+    return;
 
 }
 
@@ -125,27 +148,23 @@ __DATA__
 <?ml version="1.0" encoding="UTF-8"?>
 <document type="freeswitch/xml">
     <section name="directory">
-        <domain name="example.com">
+        <domain name="<%= $domain %>">
             <params>
-                <param name="dial-string" value="{^^:sip_invite_domain=${dialed_domain}:presence_id=${dialed_user}@${dialed_domain}}${sofia_contact(*/${dialed_user}@${dialed_domain})},${verto_contact(${dialed_user}@${dialed_domain})}"/>
-                <param name="jsonrpc-allowed-methods" value="verto"/>
+                <param name="dial-string" value="${sofia_contact(${dialed_user}@${dialed_domain})}"/>
             </params>
             <users>
-                <user id="1000" cacheable="true">
+                <user id="<%= $id %>" cacheable="true">
                     <params>
-                        <param name="auth-acl" value="users"/>
-                        <param name="password" value="1000"/>
-                        <param name="vm-password" value="1000"/>
+                        <param name="auth-acl" value="<%= $acl %>"/>
+                        <param name="password" value="<%= $password %>"/>
+                        <param name="vm-password" value="<%= $vm_password %>"/>
                     </params>
                     <variables>
-                        <variable name="toll_allow" value="domestic,international,local"/>
-                        <variable name="accountcode" value="1000"/>
-                        <variable name="user_context" value="default"/>
-                        <variable name="effective_caller_id_name" value="Extension 1000"/>
-                        <variable name="effective_caller_id_number" value="1000"/>
-                        <variable name="outbound_caller_id_name" value="Extension 1000"/>
-                        <variable name="outbound_caller_id_number" value="1000"/>
-                        <variable name="callgroup" value="techsupport"/>
+                        <variable name="toll_allow" value="<%= $toll_allow %>"/>
+                        <variable name="user_context" value="<%= $context %>"/>
+                        <variable name="effective_caller_id_name" value="<%= $caller_id_name %>"/>
+                        <variable name="effective_caller_id_number" value="<%= $caller_id_number %>"/>
+                        <variable name="callgroup" value="<%= $callgroup %>"/>
                     </variables>
                 </user>
             </users>
@@ -157,6 +176,6 @@ __DATA__
 <?xml version="1.0" encoding="UTF-8"?>
 <document type="freeswitch/xml">
     <section name="result">
-            <result status="not found" />
+        <result status="not found" />
     </section>
 </document>
