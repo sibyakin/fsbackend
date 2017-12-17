@@ -24,7 +24,6 @@ use strict;
 use warnings;
 
 use EV;    # just to be sure
-use DDP colored => 1;    # needed for debug only
 use Sys::Info;
 use XML::LibXML;
 use Mojolicious::Lite;
@@ -34,7 +33,8 @@ my $pg = Mojo::Pg->new('postgresql://127.0.0.1/fsbackend');
 
 post '/xml_api/v1/dialplan' => sub {
     my $c = shift;
-    $c->render_later;
+
+    #$c->render_later;
     my $xml = mkxml();
     addaction( $xml, 'hangup' );
     addaction( $xml, 'hangup', 'qwe' );
@@ -43,7 +43,8 @@ post '/xml_api/v1/dialplan' => sub {
 
 post '/xml_api/v1/directory' => sub {
     my $c = shift;
-    $c->render_later;
+
+    #$c->render_later;
     my $foo  = $c->req->body_params->param('foo');
     my $user = $pg->db->select(
         'accounts',
