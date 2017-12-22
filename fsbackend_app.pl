@@ -32,43 +32,44 @@ use Mojo::Pg;
 my $pg = Mojo::Pg->new('postgresql://127.0.0.1/fsbackend');
 
 post '/xml_api/v1/dialplan' => sub {
-    my $c = shift;
-
-    #$c->render_later;
+    my $c   = shift;
     my $xml = mkxml();
+    addaction( $xml, 'info' );
     addaction( $xml, 'hangup' );
-    addaction( $xml, 'hangup', 'qwe' );
     $c->render( data => $xml );
 };
 
 post '/xml_api/v1/directory' => sub {
-    my $c = shift;
+    my $c   = shift;
+    my $act = $c->req->body_params->param('action');
+    my $id  = $c->req->body_params->param('sip_auth_username');
+    if ( $act eq 'sip_auth' ) {
 
-    #$c->render_later;
-    my $foo  = $c->req->body_params->param('foo');
-    my $user = $pg->db->select(
-        'accounts',
-        [
-            'id',               'password',
-            'domain',           'acl',
-            'vm_password',      'toll_allow',
-            'context',          'caller_id_name',
-            'caller_id_number', 'callgroup'
-        ],
-        { id => $foo }
-    )->hash;
-    $c->stash(
-        id               => $user->{id},
-        password         => $user->{password},
-        domain           => $user->{domain},
-        acl              => $user->{acl},
-        vm_password      => $user->{vm_password},
-        toll_allow       => $user->{toll_allow},
-        context          => $user->{context},
-        caller_id_name   => $user->{caller_id_name},
-        caller_id_number => $user->{caller_id_number},
-        callgroup        => $user->{callgroup}
-    );
+        # SQL::Abstract pod can explain a lot
+        my $user = $pg->db->select(
+            'accounts',
+            [
+                'id',               'password',
+                'domain',           'acl',
+                'vm_password',      'toll_allow',
+                'context',          'caller_id_name',
+                'caller_id_number', 'callgroup'
+            ],
+            { id => $id }
+        )->hash;
+        $c->stash(
+            id               => $user->{id},
+            password         => $user->{password},
+            domain           => $user->{domain},
+            acl              => $user->{acl},
+            vm_password      => $user->{vm_password},
+            toll_allow       => $user->{toll_allow},
+            context          => $user->{context},
+            caller_id_name   => $user->{caller_id_name},
+            caller_id_number => $user->{caller_id_number},
+            callgroup        => $user->{callgroup}
+        );
+    }
     $c->render( template => 'directory', format => 'xml' );
 };
 
@@ -80,12 +81,15 @@ post '/xml_api/v1/directory' => sub {
 #    $c->render( template => 404, format => 'xml' );
 #};
 
+# Subroutine usage examples:
+#
 # addaction ("$xml", "fs app")
 # addaction ("$xml", "fs app", "params of app")
 
 sub addaction {
     my ( $xml, $app, $dat ) = @_;
 
+    # Cool xpath stuff
     # be aware! context forcing (@=>$) magica here:
     my ($condition) =
       $xml->findnodes('/document/section/context/extension/condition');
@@ -100,7 +104,7 @@ sub addaction {
 
 }
 
-# XML boilerplate stuff
+# LibXML boilerplate stuff
 
 sub mkxml {
 
@@ -137,46 +141,50 @@ sub mkxml {
 
 my $sysinfo = Sys::Info->new;
 my $cpuinfo = $sysinfo->device( CPU => my %options );
-my $workers =
-  ( $cpuinfo->count * 2 );    # yes, we want twice more workers than cores
 
+# yes, we want twice more workers than cores. Or more...
+my $workers = ( $cpuinfo->count * 2 );
 app->config( hypnotoad => { workers => $workers } );
 app->start;
 
 __DATA__
 
 @@ directory.xml.ep
-<?ml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <document type="freeswitch/xml">
-    <section name="directory">
-        <domain name="<%= $domain %>">
-            <params>
-                <param name="dial-string" value="${sofia_contact(${dialed_user}@${dialed_domain})}"/>
-            </params>
-            <users>
-                <user id="<%= $id %>" cacheable="true">
-                    <params>
-                        <param name="auth-acl" value="<%= $acl %>"/>
-                        <param name="password" value="<%= $password %>"/>
-                        <param name="vm-password" value="<%= $vm_password %>"/>
-                    </params>
-                    <variables>
-                        <variable name="toll_allow" value="<%= $toll_allow %>"/>
-                        <variable name="user_context" value="<%= $context %>"/>
-                        <variable name="effective_caller_id_name" value="<%= $caller_id_name %>"/>
-                        <variable name="effective_caller_id_number" value="<%= $caller_id_number %>"/>
-                        <variable name="callgroup" value="<%= $callgroup %>"/>
-                    </variables>
-                </user>
-            </users>
-        </domain>
-    </section>
+  <section name="directory" description="User Directory">
+    <domain name="<%= $domain %>">
+      <params>
+        <param name="dial-string" value="${sofia_contact(${dialed_user}@${dialed_domain})}"/>
+      </params>
+      <groups>
+        <group name="default">
+          <users>
+            <user id="<%= $id %>" cacheable="true">
+              <params>
+                <param name="auth-acl" value="<%= $acl %>"/>
+                <param name="password" value="<%= $password %>"/>
+                <param name="vm-password" value="<%= $vm_password %>"/>
+              </params>
+              <variables>
+                <variable name="toll_allow" value="<%= $toll_allow %>"/>
+                <variable name="user_context" value="<%= $context %>"/>
+                <variable name="effective_caller_id_name" value="<%= $caller_id_name %>"/>
+                <variable name="effective_caller_id_number" value="<%= $caller_id_number %>"/>
+                <variable name="callgroup" value="<%= $callgroup %>"/>
+              </variables>
+            </user>
+          </users>
+        </group>
+      </groups>
+    </domain>
+  </section>
 </document>
 
 @@ 404.xml.ep
 <?xml version="1.0" encoding="UTF-8"?>
 <document type="freeswitch/xml">
-    <section name="result">
-        <result status="not found" />
-    </section>
+  <section name="result">
+    <result status="not found" />
+  </section>
 </document>
