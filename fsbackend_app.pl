@@ -34,7 +34,7 @@ my $pg = Mojo::Pg->new('postgresql://127.0.0.1/fsbackend');
 post '/xml_api/v1/dialplan' => sub {
     my $c   = shift;
     my $xml = mkxml();
-    addaction( $xml, 'info' );
+    addaction( $xml, 'set', 'sip_sticky_contact=true' );
     addaction( $xml, 'hangup' );
     $c->render( data => $xml );
 };
